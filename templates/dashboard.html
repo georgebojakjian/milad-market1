@@ -77,7 +77,8 @@
                                 </label>
                             </td>
                             <td>
-                                <button onclick="deleteProduct({{ p.id }})" class="btn-danger">🗑️</button>
+                                <button class="btn-edit" onclick="openEditProduct({{ p.id }})">✏️</button>
+                                <button class="btn-danger" onclick="deleteProduct({{ p.id }})">🗑️</button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -86,14 +87,13 @@
             </div>
         </section>
 
-        <!-- Orders Tab (NEW DESIGN) -->
+        <!-- Orders Tab -->
         <section id="tab-orders" class="tab-content">
             <div class="dash-header">
                 <h2>📋 إدارة الطلبات</h2>
                 <button class="btn-primary" onclick="openAddOrder()">➕ إضافة طلب (من واتساب)</button>
             </div>
 
-            <!-- Order Stats -->
             <div class="order-stats">
                 <span>⏳ معلق: <strong id="pendingCount">0</strong></span>
                 <span>🔄 قيد التحضير: <strong id="preparingCount">0</strong></span>
@@ -146,8 +146,8 @@
                     <input name="store_name" value="{{ store.store_name }}">
                 </div>
                 <div class="form-group">
-                    <label>العنوان (بالإضافة إلى رمز الموقع)</label>
-                    <input name="store_address" value="{{ store.store_address }}" placeholder="مثال: VVPQ+XHQ, Tartus, Syria">
+                    <label>العنوان</label>
+                    <input name="store_address" value="{{ store.store_address }}" placeholder="VVPQ+XHQ, Tartus, Syria">
                 </div>
                 <div class="form-group">
                     <label>رقم الهاتف</label>
@@ -162,8 +162,8 @@
                     <input name="working_hours" value="{{ store.working_hours }}">
                 </div>
                 <div class="form-group">
-                    <label>كلمة المرور الجديدة (اترك فارغاً للإبقاء على القديمة)</label>
-                    <input name="admin_password" type="password" placeholder="••••••">
+                    <label>كلمة المرور الجديدة</label>
+                    <input name="admin_password" type="password" placeholder="•••••• (اترك فارغاً للإبقاء)">
                 </div>
                 <button type="submit" class="btn-primary">💾 حفظ الإعدادات</button>
             </form>
@@ -171,54 +171,6 @@
     </main>
 </div>
 
-<!-- Add Product Modal (same as before) -->
-<div id="productModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h3>إضافة منتج جديد</h3>
-        <form id="addProductForm" enctype="multipart/form-data">
-            <input type="text" name="name_ar" placeholder="الاسم بالعربية *" required>
-            <input type="text" name="name_en" placeholder="الاسم بالإنجليزية (اختياري)">
-            <input type="number" name="price_usd" placeholder="السعر بالدولار *" step="0.01" required>
-            <input type="text" name="category" placeholder="التصنيف (مثل: مشروبات، حلويات)">
-            <label><input type="checkbox" name="is_in_stock" checked> متوفر حالياً</label>
-            <input type="file" name="image" accept="image/*">
-            <button type="submit" class="btn-primary">➕ إضافة</button>
-        </form>
-    </div>
-</div>
-
-<!-- Edit Order Modal -->
-<div id="editOrderModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeEditOrderModal()">&times;</span>
-        <h3>✏️ تعديل الطلب</h3>
-        <form id="editOrderForm">
-            <input type="hidden" id="editOrderId" name="order_id">
-            <div class="form-group">
-                <label>اسم العميل</label>
-                <input type="text" id="editCustomerName" name="customer_name" required>
-            </div>
-            <div class="form-group">
-                <label>المنتجات (نص)</label>
-                <input type="text" id="editItems" name="product_ids" placeholder="مثال: بيبسي ×2، شيبس ×1">
-            </div>
-            <div class="form-group">
-                <label>الإجمالي ($)</label>
-                <input type="number" id="editTotal" name="total_price" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label>الحالة</label>
-                <select id="editStatus" name="status">
-                    <option value="pending">⏳ معلق</option>
-                    <option value="preparing">🔄 قيد التحضير</option>
-                    <option value="ready">✅ جاهز</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-primary">💾 حفظ التغييرات</button>
-        </form>
-    </div>
-</div>
 <!-- ===== TOAST CONTAINER ===== -->
 <div id="toastContainer" class="toast-container"></div>
 
@@ -235,7 +187,46 @@
     </div>
 </div>
 
-<!-- ===== ADD ORDER MODAL (Premium) ===== -->
+<!-- ===== ADD PRODUCT MODAL ===== -->
+<div class="modal-overlay" id="productModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="productModalTitle">➕ إضافة منتج جديد</h3>
+            <button class="modal-close" onclick="closeProductModal()">✕</button>
+        </div>
+        <form id="addProductForm" enctype="multipart/form-data">
+            <input type="hidden" id="editProductId" name="product_id">
+            <div class="form-group">
+                <label>الاسم بالعربية *</label>
+                <input type="text" id="productNameAr" name="name_ar" required>
+            </div>
+            <div class="form-group">
+                <label>الاسم بالإنجليزية (اختياري)</label>
+                <input type="text" id="productNameEn" name="name_en">
+            </div>
+            <div class="form-group">
+                <label>السعر بالدولار *</label>
+                <input type="number" id="productPrice" name="price_usd" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>التصنيف</label>
+                <input type="text" id="productCategory" name="category" placeholder="مثال: مشروبات، حلويات">
+            </div>
+            <div class="form-group">
+                <label>صورة المنتج</label>
+                <input type="file" id="productImage" name="image" accept="image/*">
+                <small style="color:#999;display:block;margin-top:4px;">اتركه فارغاً للإبقاء على الصورة الحالية عند التعديل</small>
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+                <label style="margin:0;">متوفر حالياً</label>
+                <input type="checkbox" id="productStock" name="is_in_stock" checked>
+            </div>
+            <button type="submit" class="btn-primary" id="productSubmitBtn">➕ إضافة</button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== ADD ORDER MODAL ===== -->
 <div class="modal-overlay" id="addOrderModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -268,11 +259,13 @@
     </div>
 </div>
 
-<!-- ===== EDIT ORDER MODAL (existing) ===== -->
-<div id="editOrderModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeEditOrderModal()">&times;</span>
-        <h3>✏️ تعديل الطلب</h3>
+<!-- ===== EDIT ORDER MODAL ===== -->
+<div class="modal-overlay" id="editOrderModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>✏️ تعديل الطلب</h3>
+            <button class="modal-close" onclick="closeEditOrderModal()">✕</button>
+        </div>
         <form id="editOrderForm">
             <input type="hidden" id="editOrderId" name="order_id">
             <div class="form-group">
@@ -299,4 +292,5 @@
         </form>
     </div>
 </div>
+
 {% endblock %}

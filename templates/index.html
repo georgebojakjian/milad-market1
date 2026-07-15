@@ -30,15 +30,14 @@
     </header>
 
     <!-- Search & Filter -->
-    <div class="search-section">
-        <input type="text" id="searchInput" placeholder="🔍 ابحث عن منتج... (مثل: بيبسي، حليب، خبز)" class="search-input">
-        <div class="category-filters" id="categoryFilters">
-            <button class="cat-btn active" data-cat="all">الكل</button>
-            {% for cat in categories %}
-            <button class="cat-btn" data-cat="{{ cat }}">{{ cat }}</button>
-            {% endfor %}
-        </div>
-    </div>
+    <div class="category-filters" id="categoryFilters">
+    <button class="cat-btn active" data-cat="all">الكل</button>
+    {% for cat in categories %}
+        {% if cat and cat.strip() %}
+        <button class="cat-btn" data-cat="{{ cat }}">{{ cat }}</button>
+        {% endif %}
+    {% endfor %}
+</div>
 
     <!-- Product Grid -->
     <div class="product-grid" id="productGrid">

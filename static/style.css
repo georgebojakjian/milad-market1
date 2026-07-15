@@ -864,3 +864,7 @@ th { color: #6b5b4f; font-weight: 600; font-size: 0.8rem; text-transform: upperc
     font-size: 1.1rem;
     margin-top: 8px;
 }
+/* Hide empty categories from the storefront */
+.cat-btn[data-cat=""] {
+    display: none !important;
+}

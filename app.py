@@ -207,6 +207,47 @@ def delete_product(pid):
         conn.execute('DELETE FROM products WHERE id = ?', (pid,))
         conn.commit()
     return jsonify({'success': True})
+@app.route('/api/product/<int:pid>', methods=['GET'])
+def get_product(pid):
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    with get_db() as conn:
+        row = conn.execute('SELECT * FROM products WHERE id = ?', (pid,)).fetchone()
+        if row:
+            return jsonify(dict(row))
+        return jsonify({'error': 'Not found'}), 404
+
+@app.route('/api/product/<int:pid>', methods=['PUT'])
+def update_product(pid):
+    if not session.get('logged_in'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    name_ar = request.form.get('name_ar')
+    name_en = request.form.get('name_en')
+    price_usd = float(request.form.get('price_usd') or 0)
+    category = request.form.get('category')
+    is_in_stock = 1 if request.form.get('is_in_stock') == 'on' else 0
+    
+    # Get current product to check if image is being updated
+    with get_db() as conn:
+        current = conn.execute('SELECT image FROM products WHERE id = ?', (pid,)).fetchone()
+        image_url = current['image'] if current else None
+    
+    # If new image uploaded, upload to ImgBB
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            image_data = file.read()
+            image_url = upload_to_imgbb(image_data, filename)
+    
+    with get_db() as conn:
+        conn.execute('''UPDATE products 
+                        SET name_ar = ?, name_en = ?, price_usd = ?, category = ?, image = ?, is_in_stock = ?
+                        WHERE id = ?''',
+                     (name_ar, name_en, price_usd, category, image_url, is_in_stock, pid))
+        conn.commit()
+    return jsonify({'success': True})
 
 @app.route('/api/settings', methods=['POST'])
 def update_settings():

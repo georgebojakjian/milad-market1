@@ -445,3 +445,60 @@ function sendOrder() {
 
 // Call on load
 document.addEventListener('DOMContentLoaded', updateOrderCounts);
+// ==============================================
+//    EDIT PRODUCT FUNCTIONS
+// ==============================================
+
+function openEditProduct(id) {
+    fetch(`/api/product/${id}`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('editProductId').value = data.id;
+        document.getElementById('productNameAr').value = data.name_ar || '';
+        document.getElementById('productNameEn').value = data.name_en || '';
+        document.getElementById('productPrice').value = data.price_usd || 0;
+        document.getElementById('productCategory').value = data.category || '';
+        document.getElementById('productStock').checked = data.is_in_stock == 1;
+        document.getElementById('productModalTitle').textContent = '✏️ تعديل المنتج';
+        document.getElementById('productSubmitBtn').textContent = '💾 حفظ التغييرات';
+        // Show the modal
+        document.getElementById('productModal').classList.add('open');
+        // Clear the image input (user can upload new one if they want)
+        document.getElementById('productImage').value = '';
+    });
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').classList.remove('open');
+    // Reset form for next use
+    document.getElementById('addProductForm').reset();
+    document.getElementById('editProductId').value = '';
+    document.getElementById('productModalTitle').textContent = '➕ إضافة منتج جديد';
+    document.getElementById('productSubmitBtn').textContent = '➕ إضافة';
+}
+
+// Override the add product form submit to handle both add and edit
+document.getElementById('addProductForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const productId = document.getElementById('editProductId').value;
+    
+    let url = '/api/product';
+    let method = 'POST';
+    if (productId) {
+        url = `/api/product/${productId}`;
+        method = 'PUT';
+    }
+    
+    fetch(url, { method: method, body: formData })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(productId ? '✅ تم تحديث المنتج!' : '✅ تمت إضافة المنتج!', 'success');
+            closeProductModal();
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast('❌ حدث خطأ، حاول مرة أخرى', 'error');
+        }
+    });
+});
