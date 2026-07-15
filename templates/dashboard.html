@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم - سوق ميلاد{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <nav class="dash-sidebar">
+        <div class="dash-logo">📋 ميلاد</div>
+        <ul>
+            <li class="active" data-tab="overview">📊 نظرة عامة</li>
+            <li data-tab="products">📦 المنتجات</li>
+            <li data-tab="orders">📋 الطلبات</li>
+            <li data-tab="settings">⚙️ الإعدادات</li>
+        </ul>
+        <a href="/logout" class="logout-btn">🚪 خروج</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dash-main">
+        <!-- Overview Tab -->
+        <section id="tab-overview" class="tab-content active">
+            <h2>📊 نظرة عامة</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-info">
+                        <h3>{{ stats.total }}</h3>
+                        <p>إجمالي المنتجات</p>
+                    </div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-icon">🚫</div>
+                    <div class="stat-info">
+                        <h3>{{ stats.out_of_stock }}</h3>
+                        <p>غير متوفرة</p>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-info">
+                        <h3>{{ stats.orders }}</h3>
+                        <p>الطلبات المستلمة</p>
+                    </div>
+                </div>
+            </div>
+            <div class="exchange-rate-box">
+                <label>🇸🇾 سعر صرف الدولار اليوم (ل.س):</label>
+                <input type="number" id="exchangeRateInput" value="{{ exchange_rate }}" step="50">
+                <button onclick="updateExchangeRate()" class="btn-primary">تحديث السعر</button>
+                <span id="rateMsg" style="margin-right:10px;font-size:14px;"></span>
+            </div>
+        </section>
+
+        <!-- Products Tab -->
+        <section id="tab-products" class="tab-content">
+            <div class="dash-header">
+                <h2>📦 إدارة المنتجات</h2>
+                <button class="btn-primary" onclick="openAddProduct()">➕ إضافة منتج</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>الصورة</th><th>الاسم</th><th>السعر (USD)</th><th>التصنيف</th><th>المخزون</th><th>إجراءات</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in products %}
+                        <tr id="product-row-{{ p.id }}">
+                            <td><img src="{{ url_for('static', filename='uploads/' + p.image) if p.image else '/static/placeholder.png' }}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22><rect width=%2250%22 height=%2250%22 fill=%22%23eee%22/><text x=%2210%22 y=%2232%22 font-size=%2224%22>📦</text></svg>'"></td>
+                            <td><strong>{{ p.name_ar }}</strong><br><small>{{ p.name_en or '' }}</small></td>
+                            <td>$ {{ "%.2f"|format(p.price_usd) }}</td>
+                            <td>{{ p.category or 'غير مصنف' }}</td>
+                            <td>
+                                <label class="knob-toggle">
+                                    <input type="checkbox" class="toggle-input" data-id="{{ p.id }}" {% if p.is_in_stock %}checked{% endif %}>
+                                    <span class="knob-slider"></span>
+                                </label>
+                            </td>
+                            <td>
+                                <button onclick="deleteProduct({{ p.id }})" class="btn-danger">🗑️</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Orders Tab (NEW DESIGN) -->
+        <section id="tab-orders" class="tab-content">
+            <div class="dash-header">
+                <h2>📋 إدارة الطلبات</h2>
+                <button class="btn-primary" onclick="openAddOrder()">➕ إضافة طلب (من واتساب)</button>
+            </div>
+
+            <!-- Order Stats -->
+            <div class="order-stats">
+                <span>⏳ معلق: <strong id="pendingCount">0</strong></span>
+                <span>🔄 قيد التحضير: <strong id="preparingCount">0</strong></span>
+                <span>✅ جاهز: <strong id="readyCount">0</strong></span>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>العميل</th>
+                            <th>المنتجات</th>
+                            <th>الإجمالي</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        {% for o in orders %}
+                        <tr id="order-row-{{ o.id }}">
+                            <td>{{ o.id }}</td>
+                            <td><strong>{{ o.customer_name }}</strong></td>
+                            <td>{{ o.product_ids or '-' }}</td>
+                            <td>$ {{ "%.2f"|format(o.total_price or 0) }}</td>
+                            <td>
+                                <select class="order-status-select" data-id="{{ o.id }}">
+                                    <option value="pending" {% if o.status == 'pending' %}selected{% endif %}>⏳ معلق</option>
+                                    <option value="preparing" {% if o.status == 'preparing' %}selected{% endif %}>🔄 قيد التحضير</option>
+                                    <option value="ready" {% if o.status == 'ready' %}selected{% endif %}>✅ جاهز</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="btn-edit" onclick="editOrder({{ o.id }})">✏️</button>
+                                <button class="btn-danger" onclick="deleteOrder({{ o.id }})">🗑️</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Settings Tab -->
+        <section id="tab-settings" class="tab-content">
+            <h2>⚙️ إعدادات المتجر</h2>
+            <form id="settingsForm" onsubmit="updateSettings(event)">
+                <div class="form-group">
+                    <label>اسم المتجر</label>
+                    <input name="store_name" value="{{ store.store_name }}">
+                </div>
+                <div class="form-group">
+                    <label>العنوان (بالإضافة إلى رمز الموقع)</label>
+                    <input name="store_address" value="{{ store.store_address }}" placeholder="مثال: VVPQ+XHQ, Tartus, Syria">
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input name="store_phone" value="{{ store.store_phone }}">
+                </div>
+                <div class="form-group">
+                    <label>رقم واتساب (بدون + أو 0)</label>
+                    <input name="whatsapp_number" value="{{ store.whatsapp_number }}">
+                </div>
+                <div class="form-group">
+                    <label>ساعات العمل</label>
+                    <input name="working_hours" value="{{ store.working_hours }}">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور الجديدة (اترك فارغاً للإبقاء على القديمة)</label>
+                    <input name="admin_password" type="password" placeholder="••••••">
+                </div>
+                <button type="submit" class="btn-primary">💾 حفظ الإعدادات</button>
+            </form>
+        </section>
+    </main>
+</div>
+
+<!-- Add Product Modal (same as before) -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3>إضافة منتج جديد</h3>
+        <form id="addProductForm" enctype="multipart/form-data">
+            <input type="text" name="name_ar" placeholder="الاسم بالعربية *" required>
+            <input type="text" name="name_en" placeholder="الاسم بالإنجليزية (اختياري)">
+            <input type="number" name="price_usd" placeholder="السعر بالدولار *" step="0.01" required>
+            <input type="text" name="category" placeholder="التصنيف (مثل: مشروبات، حلويات)">
+            <label><input type="checkbox" name="is_in_stock" checked> متوفر حالياً</label>
+            <input type="file" name="image" accept="image/*">
+            <button type="submit" class="btn-primary">➕ إضافة</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Order Modal -->
+<div id="editOrderModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditOrderModal()">&times;</span>
+        <h3>✏️ تعديل الطلب</h3>
+        <form id="editOrderForm">
+            <input type="hidden" id="editOrderId" name="order_id">
+            <div class="form-group">
+                <label>اسم العميل</label>
+                <input type="text" id="editCustomerName" name="customer_name" required>
+            </div>
+            <div class="form-group">
+                <label>المنتجات (نص)</label>
+                <input type="text" id="editItems" name="product_ids" placeholder="مثال: بيبسي ×2، شيبس ×1">
+            </div>
+            <div class="form-group">
+                <label>الإجمالي ($)</label>
+                <input type="number" id="editTotal" name="total_price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>الحالة</label>
+                <select id="editStatus" name="status">
+                    <option value="pending">⏳ معلق</option>
+                    <option value="preparing">🔄 قيد التحضير</option>
+                    <option value="ready">✅ جاهز</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">💾 حفظ التغييرات</button>
+        </form>
+    </div>
+</div>
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- ===== CONFIRM MODAL ===== -->
+<div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+        <div class="confirm-icon">⚠️</div>
+        <h3>تأكيد العملية</h3>
+        <p id="confirmMessage">هل أنت متأكد؟</p>
+        <div class="confirm-actions">
+            <button class="btn-cancel" id="cancelBtn">إلغاء</button>
+            <button class="btn-danger" id="confirmBtn">تأكيد</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ADD ORDER MODAL (Premium) ===== -->
+<div class="modal-overlay" id="addOrderModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>➕ إضافة طلب جديد (من واتساب)</h3>
+            <button class="modal-close" onclick="closeAddOrderModal()">✕</button>
+        </div>
+        <form id="addOrderForm">
+            <div class="form-group">
+                <label>👤 اسم العميل</label>
+                <input type="text" name="customer_name" placeholder="مثال: أحمد" required>
+            </div>
+            <div class="form-group">
+                <label>📦 المنتجات (نص)</label>
+                <input type="text" name="product_ids" placeholder="مثال: بيبسي ×2، شيبس ×1" required>
+            </div>
+            <div class="form-group">
+                <label>💰 الإجمالي ($)</label>
+                <input type="number" name="total_price" step="0.01" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label>📌 الحالة</label>
+                <select name="status" id="addOrderStatus">
+                    <option value="pending">⏳ معلق</option>
+                    <option value="preparing">🔄 قيد التحضير</option>
+                    <option value="ready">✅ جاهز</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">➕ إضافة الطلب</button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== EDIT ORDER MODAL (existing) ===== -->
+<div id="editOrderModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditOrderModal()">&times;</span>
+        <h3>✏️ تعديل الطلب</h3>
+        <form id="editOrderForm">
+            <input type="hidden" id="editOrderId" name="order_id">
+            <div class="form-group">
+                <label>اسم العميل</label>
+                <input type="text" id="editCustomerName" name="customer_name" required>
+            </div>
+            <div class="form-group">
+                <label>المنتجات</label>
+                <input type="text" id="editItems" name="product_ids">
+            </div>
+            <div class="form-group">
+                <label>الإجمالي ($)</label>
+                <input type="number" id="editTotal" name="total_price" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>الحالة</label>
+                <select id="editStatus" name="status">
+                    <option value="pending">⏳ معلق</option>
+                    <option value="preparing">🔄 قيد التحضير</option>
+                    <option value="ready">✅ جاهز</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">💾 حفظ التغييرات</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

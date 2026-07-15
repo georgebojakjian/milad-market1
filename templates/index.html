@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}سوق ميلاد - Mini Market{% endblock %}
+
+{% block content %}
+<div class="store-container">
+    <!-- Premium Header -->
+    <header class="store-header">
+        <div class="header-bg-pattern"></div>
+        <div class="header-content-wrapper">
+            <div class="header-text">
+                <h1 class="store-logo">
+                    <span class="logo-icon">🛒</span>
+                    <span class="logo-text">{{ store.name }}</span>
+                </h1>
+                <p class="store-tagline">📍 أهلاً بك في سوق حيك • جودة وثقة</p>
+                <div class="store-hours-badge">
+                    🕒 {{ store.hours }}
+                </div>
+            </div>
+            <div class="currency-badge">
+                <div class="currency-rate">
+                    <span class="currency-flag">🇺🇸</span> 1$ = 
+                    <span class="syp-rate">{{ "{:,.0f}".format(exchange_rate) }}</span>
+                    <span class="currency-flag">🇸🇾</span>
+                </div>
+                <small>سعر الصرف اليوم</small>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search & Filter -->
+    <div class="search-section">
+        <input type="text" id="searchInput" placeholder="🔍 ابحث عن منتج... (مثل: بيبسي، حليب، خبز)" class="search-input">
+        <div class="category-filters" id="categoryFilters">
+            <button class="cat-btn active" data-cat="all">الكل</button>
+            {% for cat in categories %}
+            <button class="cat-btn" data-cat="{{ cat }}">{{ cat }}</button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Product Grid -->
+    <div class="product-grid" id="productGrid">
+        {% for product in products %}
+        <div class="product-card {% if not product.is_in_stock %}out-of-stock{% endif %}" 
+             data-category="{{ product.category }}" 
+             data-name="{{ product.name_ar }}" 
+             data-price="{{ product.price_usd }}" 
+             data-id="{{ product.id }}">
+            <div class="card-image">
+                {% if product.image %}
+                <img src="{{ url_for('static', filename='uploads/' + product.image) }}" alt="{{ product.name_ar }}" loading="lazy">
+                {% else %}
+                <div class="placeholder-img">📦</div>
+                {% endif %}
+                <span class="stock-badge {% if product.is_in_stock %}in-stock{% else %}out-stock{% endif %}">
+                    {% if product.is_in_stock %}✅ متوفر{% else %}❌ غير متوفر{% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <h3 class="product-name">{{ product.name_ar }}</h3>
+                {% if product.name_en %}
+                <span class="product-name-en">{{ product.name_en }}</span>
+                {% endif %}
+                <div class="price-row">
+                    <span class="price-usd">$ {{ "%.2f"|format(product.price_usd) }}</span>
+                    <span class="price-syp">🇸🇾 {{ "{:,.0f}".format(product.price_usd * exchange_rate) }}</span>
+                </div>
+                {% if product.is_in_stock %}
+                <button class="add-to-cart-btn" onclick="addToCart('{{ product.id }}', '{{ product.name_ar }}', {{ product.price_usd }})">
+                    🛒 أضف إلى السلة
+                </button>
+                {% else %}
+                <button class="out-of-stock-btn" disabled>غير متوفر</button>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">لا توجد منتجات حالياً. تفضل بزيارتنا قريباً!</div>
+        {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="store-footer">
+        <div class="footer-grid">
+            <div>
+    <h4>📍 العنوان</h4>
+    <p>{{ store.address }}</p>
+    <a href="https://maps.app.goo.gl/hKQJNdFXdTA2aLx76" target="_blank" class="map-link">🗺️ عرض على الخريطة</a>
+</div>
+            <div>
+                <h4>📞 للاتصال</h4>
+                <p>{{ store.phone }}</p>
+                <h4 style="margin-top: 10px;">🕒 ساعات العمل</h4>
+                <p>{{ store.hours }}</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 سوق ميلاد الصغير - جميع الحقوق محفوظة</p>
+        </div>
+    </footer>
+</div>
+
+<!-- Floating WhatsApp (General Inquiry) -->
+<a href="https://wa.me/{{ store.whatsapp }}?text=مرحباً!%20أرغب%20في%20الاستفسار%20عن%20منتجاتكم" 
+   target="_blank" 
+   class="floating-wa">
+   💬
+</a>
+
+<!-- Floating Cart Icon -->
+<div class="cart-float" id="cartFloat" onclick="toggleCart()">
+    🛒 <span id="cartCount">0</span>
+</div>
+
+<!-- Cart Popup -->
+<div class="cart-popup" id="cartPopup">
+    <div class="cart-header">
+        <h3>🛒 سلة التسوق</h3>
+        <span class="cart-close" onclick="toggleCart()">✕</span>
+    </div>
+    <div class="cart-items" id="cartItems">
+        <p class="empty-cart">السلة فارغة</p>
+    </div>
+    <div class="cart-footer">
+        <div class="cart-total">
+            <span>الإجمالي:</span>
+            <span id="cartTotal">$0.00</span>
+        </div>
+        <button class="send-order-btn" onclick="sendOrder()">
+            📱 إرسال الطلب عبر واتساب
+        </button>
+    </div>
+</div>
+
+<!-- Overlay for cart popup -->
+<div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+{% endblock %}
