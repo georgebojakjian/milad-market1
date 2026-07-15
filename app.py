@@ -1,18 +1,44 @@
 import os
 import sqlite3
+import requests
+import base64
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
 from datetime import datetime
-import json
 
 app = Flask(__name__)
-app.secret_key = 'milad_market_secret_2026'  # Change this later
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.secret_key = 'milad_market_secret_2026'
 
-# --- Database Helper ---
+# ===== IMGBB CONFIGURATION =====
+# PASTE YOUR IMGBB API KEY HERE (from imgbb.com dashboard)
+IMGBB_API_KEY = "YOUR_IMGBB_API_KEY_HERE"
+
+def upload_to_imgbb(image_data, filename):
+    """Upload an image to ImgBB and return the direct URL"""
+    try:
+        # Encode image to base64
+        encoded = base64.b64encode(image_data).decode('utf-8')
+        
+        # Send to ImgBB API
+        url = "https://api.imgbb.com/1/upload"
+        payload = {
+            "key": IMGBB_API_KEY,
+            "image": encoded,
+            "name": filename
+        }
+        response = requests.post(url, data=payload)
+        result = response.json()
+        
+        if result.get('success'):
+            return result['data']['url']
+        else:
+            print(f"ImgBB upload error: {result}")
+            return None
+    except Exception as e:
+        print(f"ImgBB upload exception: {e}")
+        return None
+
+# ===== DATABASE =====
 def get_db():
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
@@ -20,7 +46,6 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
-        # Products table
         conn.execute('''CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name_ar TEXT NOT NULL,
@@ -29,18 +54,15 @@ def init_db():
             category TEXT,
             image TEXT,
             is_in_stock BOOLEAN DEFAULT 1,
-            is_featured BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Settings table (Store Info + Exchange Rate)
         conn.execute('''CREATE TABLE IF NOT EXISTS settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             key TEXT UNIQUE NOT NULL,
             value TEXT
         )''')
         
-        # Orders table (Manual WhatsApp tracking)
         conn.execute('''CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_name TEXT,
@@ -50,7 +72,6 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Insert default settings if not exist
         defaults = {
             'store_name': 'سوق ميلاد الصغير - Milad Mini Market',
             'store_address': 'VVPQ+XHQ, Tartus, Syria',
@@ -69,13 +90,12 @@ def init_db():
 
 init_db()
 
-# --- Helper: Get Settings ---
 def get_setting(key):
     with get_db() as conn:
         row = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
         return row['value'] if row else None
 
-# --- Routes ---
+# ===== ROUTES =====
 @app.route('/')
 def index():
     with get_db() as conn:
@@ -138,7 +158,7 @@ def dashboard():
                            exchange_rate=exchange_rate,
                            store=store_info)
 
-# --- API Endpoints ---
+# ===== API ENDPOINTS =====
 @app.route('/api/toggle/<int:pid>', methods=['POST'])
 def toggle_stock(pid):
     if not session.get('logged_in'):
@@ -163,20 +183,19 @@ def add_product():
     category = request.form.get('category')
     is_in_stock = 1 if request.form.get('is_in_stock') == 'on' else 0
     
-    image_filename = None
+    image_url = None
     if 'image' in request.files:
         file = request.files['image']
         if file and file.filename != '':
             filename = secure_filename(file.filename)
-            name, ext = os.path.splitext(filename)
-            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{name}{ext}"
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image_filename = filename
-
+            image_data = file.read()
+            # Upload to ImgBB
+            image_url = upload_to_imgbb(image_data, filename)
+    
     with get_db() as conn:
         conn.execute('''INSERT INTO products (name_ar, name_en, price_usd, category, image, is_in_stock)
                         VALUES (?, ?, ?, ?, ?, ?)''',
-                     (name_ar, name_en, price_usd, category, image_filename, is_in_stock))
+                     (name_ar, name_en, price_usd, category, image_url, is_in_stock))
         conn.commit()
     return jsonify({'success': True})
 
@@ -235,15 +254,12 @@ def update_order(oid):
     if not session.get('logged_in'):
         return jsonify({'error': 'Unauthorized'}), 401
     data = request.get_json()
-    customer = data.get('customer_name')
-    items = data.get('product_ids')
-    total = data.get('total_price')
-    status = data.get('status')
     with get_db() as conn:
         conn.execute('''UPDATE orders 
                         SET customer_name = ?, product_ids = ?, total_price = ?, status = ?
                         WHERE id = ?''',
-                     (customer, items, total, status, oid))
+                     (data.get('customer_name'), data.get('product_ids'), 
+                      data.get('total_price'), data.get('status'), oid))
         conn.commit()
     return jsonify({'success': True})
 

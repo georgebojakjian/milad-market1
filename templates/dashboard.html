@@ -66,7 +66,7 @@
                     <tbody>
                         {% for p in products %}
                         <tr id="product-row-{{ p.id }}">
-                            <td><img src="{{ url_for('static', filename='uploads/' + p.image) if p.image else '/static/placeholder.png' }}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22><rect width=%2250%22 height=%2250%22 fill=%22%23eee%22/><text x=%2210%22 y=%2232%22 font-size=%2224%22>📦</text></svg>'"></td>
+                            <td><img src="{{ p.image or '/static/placeholder.png' }}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22><rect width=%2250%22 height=%2250%22 fill=%22%23eee%22/><text x=%2210%22 y=%2232%22 font-size=%2224%22>📦</text></svg>'"></td>
                             <td><strong>{{ p.name_ar }}</strong><br><small>{{ p.name_en or '' }}</small></td>
                             <td>$ {{ "%.2f"|format(p.price_usd) }}</td>
                             <td>{{ p.category or 'غير مصنف' }}</td>

@@ -50,7 +50,7 @@
              data-id="{{ product.id }}">
             <div class="card-image">
                 {% if product.image %}
-                <img src="{{ url_for('static', filename='uploads/' + product.image) }}" alt="{{ product.name_ar }}" loading="lazy">
+                <img src="{{ product.image }}" alt="{{ product.name_ar }}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect width=%22200%22 height=%22200%22 fill=%22%23f5ede5%22/><text x=%2270%22 y=%22110%22 font-size=%2248%22>📦</text></svg>'">
                 {% else %}
                 <div class="placeholder-img">📦</div>
                 {% endif %}
