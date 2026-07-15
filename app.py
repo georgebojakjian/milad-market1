@@ -11,7 +11,7 @@ app.secret_key = 'milad_market_secret_2026'
 
 # ===== IMGBB CONFIGURATION =====
 # PASTE YOUR IMGBB API KEY HERE (from imgbb.com dashboard)
-IMGBB_API_KEY = "YOUR_IMGBB_API_KEY_HERE"
+IMGBB_API_KEY = "d4aabcd770e0d4852ef1cc62eafab128"
 
 def upload_to_imgbb(image_data, filename):
     """Upload an image to ImgBB and return the direct URL"""
